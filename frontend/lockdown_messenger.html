@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lockdown Messenger</title>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#16233a; --ink-2:#22344f; --paper:#e9edf2; --card:#fff; --line:#cfd6e0;
+  --text:#1b2433; --muted:#667489; --brass:#b8851f; --brass-soft:#f4e7c8;
+  --mine:#16233a; --mine-text:#f3f5f8; --theirs:#fff; --danger:#b3372f;
+  --font:'Manrope',system-ui,sans-serif; --display:'Fraunces',Georgia,serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{--paper:#0f1826;--card:#18253a;--line:#2b3b55;--text:#e6ebf3;--muted:#92a0b6;
+    --mine:#b8851f;--mine-text:#161006;--theirs:#1f2f48;--brass-soft:#3a2f14;--ink:#0b1320;--ink-2:#17253b}
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--font);background:var(--paper);color:var(--text);font-size:15px}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.hidden{display:none!important}
+
+/* connect screen */
+#connect{min-height:100%;display:grid;place-items:center;padding:24px}
+.panel{width:min(880px,100%);display:grid;grid-template-columns:1fr 1fr;border-radius:10px;overflow:hidden;box-shadow:0 12px 40px rgba(10,20,40,.18)}
+.brand{background:var(--ink);color:#e8edf5;padding:40px 36px;display:flex;flex-direction:column;justify-content:space-between;gap:32px}
+.brand h1{font-family:var(--display);font-size:2.4rem;line-height:1.05;margin:0 0 14px;font-weight:600}
+.brand p{margin:0;color:#aab7cb;line-height:1.55;max-width:34ch}
+.vault{width:84px;height:84px}
+.vault circle,.vault path{fill:none;stroke:var(--brass);stroke-width:3}
+.facts{margin:0;padding:0;list-style:none;color:#aab7cb;font-size:.9rem;display:grid;gap:6px}
+.facts b{color:#e8edf5;font-weight:700}
+form{background:var(--card);padding:40px 36px;display:grid;gap:16px;align-content:center}
+form h2{margin:0 0 4px;font-size:1.25rem}
+label{display:grid;gap:6px;font-weight:700;font-size:.85rem}
+label small{font-weight:400;color:var(--muted)}
+input{padding:11px 12px;border:1px solid var(--line);border-radius:6px;background:var(--paper)}
+.row{display:grid;grid-template-columns:2fr 1fr;gap:12px}
+.btn{border:0;border-radius:6px;padding:12px 16px;font-weight:700;cursor:pointer;background:var(--ink);color:#fff}
+.btn:hover{background:var(--ink-2)}
+.err{color:var(--danger);min-height:1.2em;font-size:.85rem;margin:0}
+.mode{font-size:.8rem;color:var(--muted);margin:0}
+
+/* chat screen */
+#chat{height:100%;display:grid;grid-template-columns:260px 1fr}
+aside{background:var(--ink);color:#e8edf5;display:flex;flex-direction:column;min-height:0}
+aside header{padding:20px;border-bottom:1px solid var(--ink-2)}
+aside header strong{font-family:var(--display);font-size:1.3rem}
+.me{color:#aab7cb;font-size:.85rem;margin-top:4px}
+aside h3{margin:18px 20px 8px;font-size:.85rem;color:#aab7cb;font-weight:500}
+#users{list-style:none;margin:0;padding:0 8px;overflow:auto;flex:1}
+#users li{padding:9px 12px;border-radius:6px;display:flex;align-items:center;gap:10px}
+#users li::before{content:"";width:8px;height:8px;border-radius:50%;background:#4fb286}
+.leave{margin:16px;background:transparent;border:1px solid #3a4e6e;color:#e8edf5}
+.leave:hover{background:var(--ink-2)}
+main{display:flex;flex-direction:column;min-height:0;min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 20px;background:var(--card);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.top .title{font-weight:700}
+.top .sub{color:var(--muted);font-size:.85rem}
+.chip{display:inline-flex;align-items:center;gap:8px;background:var(--brass-soft);color:var(--brass);padding:6px 12px;border-radius:999px;font-weight:700;font-size:.82rem}
+.switch{display:flex;align-items:center;gap:8px;font-size:.85rem;font-weight:500;cursor:pointer}
+#log{flex:1;overflow:auto;padding:20px;display:flex;flex-direction:column;gap:10px}
+.msg{max-width:min(560px,80%);padding:10px 14px;border-radius:12px;background:var(--theirs);border:1px solid var(--line);align-self:flex-start;overflow-wrap:anywhere}
+.msg.mine{background:var(--mine);color:var(--mine-text);border-color:transparent;align-self:flex-end}
+.msg .meta{font-size:.75rem;opacity:.7;margin-bottom:3px;display:flex;gap:8px}
+.msg .cipher{display:none;font-family:ui-monospace,Menlo,monospace;font-size:.78rem;opacity:.85}
+.show-cipher .msg .plain{display:none}
+.show-cipher .msg .cipher{display:block}
+.sys{align-self:center;color:var(--muted);font-size:.82rem}
+.empty{margin:auto;color:var(--muted);text-align:center}
+#composer{display:flex;gap:10px;padding:14px 20px;background:var(--card);border-top:1px solid var(--line)}
+#composer input{flex:1}
+@media (max-width:760px){
+  .panel{grid-template-columns:1fr}.brand{padding:28px}
+  #chat{grid-template-columns:1fr;grid-template-rows:auto 1fr}
+  aside{flex-direction:row;align-items:center;flex-wrap:wrap}
+  aside h3,#users{display:none}.leave{margin:12px 20px 12px auto}
+}
+</style>
+  </head>
+<body>
+<section id="connect">
+  <div class="panel">
+    <div class="brand">
+      <div>
+        <svg class="vault" viewBox="0 0 84 84" aria-hidden="true"><circle cx="42" cy="42" r="36"/><circle cx="42" cy="42" r="22"/><path d="M42 20v8M42 56v8M20 42h8M56 42h8M42 42l8-8"/></svg>
+        <h1>Lockdown Messenger</h1>
+        <p>Talk to people on your Wi-Fi network. Every message is encrypted before it leaves your computer.</p>
+      </div>
+      <ul class="facts">
+        <li><b>AES</b> encryption on every message</li>
+        <li><b>TCP</b> connection to the server on your local network</li>
+      </ul>
+    </div>
+    <form id="connectForm" novalidate>
+      <h2>Join the chat</h2>
+      <label>Your name<input id="username" maxlength="20" autocomplete="off" required></label>
+      <div class="row">
+        <label>Server address<input id="host" value="192.168.1.10" autocomplete="off" required></label>
+        <label>Port<input id="port" value="5050" inputmode="numeric" required></label>
+      </div>
+      <button class="btn" type="submit">Connect</button>
+      <p class="mode" id="modeNote"></p>
+    </form>
+  </div>
+</section>
+
+<section id="chat" class="hidden">
+  <aside>
+    <header><strong>Lockdown</strong><div class="me" id="meLabel"></div></header>
+    <h3>Online now</h3>
+    <ul id="users"></ul>
+    <button class="btn leave" id="leave">Disconnect</button>
+  </aside>
+  <main id="mainPane">
+    <div class="top">
+      <div><div class="title" id="roomTitle">Local network chat</div><div class="sub" id="serverLabel"></div></div>
+      <span class="chip" id="lockChip">&#128274; AES encrypted</span>
+      <label class="switch"><input type="checkbox" id="cipherToggle"> Show encrypted text</label>
+    </div>
+    <div id="log" aria-live="polite"><div class="empty" id="empty">No messages yet.<br>Say hello to start the conversation.</div></div>
+    <form id="composer" autocomplete="off">
+      <input id="msgInput" placeholder="Type a message" maxlength="500" aria-label="Message">
+      <button class="btn" type="submit">Send</button>
+    </form>
+  </main>
+</section>
+
+<script>
+/* ============================================================
+   TRANSPORT LAYER - the only part you need to wire to your Python code.
+   A browser cannot open raw TCP sockets, so the page talks to your
+   Python client through one of:
+     1) a small WebSocket bridge (WebSocketTransport below), or
+     2) Eel / pywebview, by replacing send()/connect() with calls to
+        your exposed Python functions.
+   Set USE_DEMO = false to use the bridge.
+   ============================================================ */
+const USE_DEMO = true;
+const BRIDGE_URL = "ws://localhost:8765";
+
+class DemoTransport {
+  constructor(h){this.h=h}
+  connect({username}){
+    setTimeout(()=>{
+      this.h.onStatus({ok:true});
+      this.h.onUsers([username,"Adrian","Yamniel"]);
+      this.h.onMessage({user:"Adrian",text:"Welcome to Lockdown Messenger.",ts:Date.now()});
+    },400);
+  }
+  send(text,me){
+    const replies=["Got it.","Message received loud and clear.","Encrypted and delivered."];
+    setTimeout(()=>this.h.onMessage({user:"Yamniel",text:replies[Math.floor(Math.random()*replies.length)],ts:Date.now()}),900);
+  }
+  close(){}
+}
+
+class WebSocketTransport {
+  /* Protocol your bridge should speak (JSON):
+     to bridge:   {type:"connect",username,host,port,key} | {type:"send",text}
+     from bridge: {type:"status",ok:true|false,error?} | {type:"users",users:[...]}
+                  | {type:"message",user,text,ts} | {type:"system",text}  */
+  constructor(h){this.h=h}
+  connect(cfg){
+    try{ this.ws=new WebSocket(BRIDGE_URL); }catch(e){ return this.h.onStatus({ok:false,error:"Cannot reach the local bridge."}); }
+    this.ws.onopen=()=>this.ws.send(JSON.stringify({type:"connect",...cfg}));
+    this.ws.onerror=()=>this.h.onStatus({ok:false,error:"Cannot reach the local bridge at "+BRIDGE_URL+"."});
+    this.ws.onclose=()=>this.h.onClosed();
+    this.ws.onmessage=ev=>{
+      const m=JSON.parse(ev.data);
+      if(m.type==="status") this.h.onStatus(m);
+      else if(m.type==="users") this.h.onUsers(m.users);
+      else if(m.type==="message") this.h.onMessage(m);
+      else if(m.type==="system") this.h.onSystem(m.text);
+    };
+  }
+  send(text){ this.ws.send(JSON.stringify({type:"send",text})); }
+  close(){ if(this.ws) this.ws.close(); }
+}
+
+/* ============================ UI ============================ */
+const $=id=>document.getElementById(id);
+let transport=null, me="";
+
+const handlers={
+  onStatus(s){
+    if(!s.ok){ $("err").textContent=s.error||"Connection failed. Check the address, port and key."; return; }
+    $("connect").classList.add("hidden"); $("chat").classList.remove("hidden");
+    $("msgInput").focus();
+  },
+  onUsers(list){
+    $("users").innerHTML="";
+    list.forEach(u=>{const li=document.createElement("li");li.textContent=u===me?u+" (you)":u;$("users").appendChild(li)});
+  },
+  onMessage(m){ addMessage(m); },
+  onSystem(t){ addSystem(t); },
+  onClosed(){ if(!$("chat").classList.contains("hidden")) addSystem("Disconnected from the server."); }
+};
+
+function fakeCipher(text){
+  // Display-only preview. Replace with the real ciphertext from your AES code if you send it to the UI.
+  const bytes=new Uint8Array(Math.max(24,Math.ceil(text.length/16)*16+16));
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes));
+}
+function clearEmpty(){const e=$("empty"); if(e) e.remove();}
+function addMessage({user,text,ts,cipher}){
+  clearEmpty();
+  const mine=user===me, d=document.createElement("div");
+  d.className="msg"+(mine?" mine":"");
+  const t=new Date(ts||Date.now()).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"});
+  const meta=document.createElement("div"); meta.className="meta";
+  meta.innerHTML="<span></span><span></span>"; meta.children[0].textContent=mine?"You":user; meta.children[1].textContent=t;
+  const p=document.createElement("div"); p.className="plain"; p.textContent=text;
+  const c=document.createElement("div"); c.className="cipher"; c.textContent=cipher||fakeCipher(text);
+  d.append(meta,p,c); $("log").appendChild(d); $("log").scrollTop=$("log").scrollHeight;
+}
+function addSystem(t){
+  clearEmpty(); const d=document.createElement("div"); d.className="sys"; d.textContent=t;
+  $("log").appendChild(d); $("log").scrollTop=$("log").scrollHeight;
+}
+
+$("modeNote").textContent=USE_DEMO?"Demo mode: no server needed. Any values will connect.":"";
+
+$("connectForm").addEventListener("submit",e=>{
+  e.preventDefault(); $("err").textContent="";
+  const cfg={username:$("username").value.trim(),host:$("host").value.trim(),port:parseInt($("port").value,10),key:$("key").value};
+  if(!cfg.username) return $("err").textContent="Enter your name.";
+  if(!cfg.host) return $("err").textContent="Enter the server address.";
+  if(!(cfg.port>0&&cfg.port<65536)) return $("err").textContent="Enter a port between 1 and 65535.";
+  if(!cfg.key) return $("err").textContent="Enter the shared key.";
+  me=cfg.username;
+  $("meLabel").textContent="Signed in as "+me;
+  $("serverLabel").textContent=cfg.host+":"+cfg.port;
+  transport=USE_DEMO?new DemoTransport(handlers):new WebSocketTransport(handlers);
+  transport.connect(cfg);
+});
+
+$("composer").addEventListener("submit",e=>{
+  e.preventDefault();
+  const text=$("msgInput").value.trim(); if(!text) return;
+  addMessage({user:me,text,ts:Date.now()});
+  transport.send(text,me);
+  $("msgInput").value="";
+});
+
+$("cipherToggle").addEventListener("change",e=>{
+  $("mainPane").classList.toggle("show-cipher",e.target.checked);
+});
+
+$("leave").addEventListener("click",()=>{
+  if(transport) transport.close();
+  $("chat").classList.add("hidden"); $("connect").classList.remove("hidden");
+  $("log").innerHTML='<div class="empty" id="empty">No messages yet.<br>Say hello to start the conversation.</div>';
+  $("key").value="";
+});
+</script>
+</body>
+</html>
